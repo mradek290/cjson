@@ -1,0 +1,6 @@
+[submodule "comfystring"]
+	path = comfystring
+	url = https://github.com/mradek290/comfystring.git
+[submodule "hmap"]
+	path = hmap
+	url = https://github.com/mradek290/hmap.git
