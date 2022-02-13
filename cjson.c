@@ -69,17 +69,11 @@ hmap* cjson__ExpungeStrings( char* input ){
 
     char* p0 = strchr( input, cjson__strdelim0 );
     if( !p0++ ){
-        //there is no string data in the input so we have nothing to expunge
-        //which means the hmap wont be used and we can return anything non null
-        //we *could* return an empty map but why go through that trouble?
-        return (hmap*)1;
-        /*
         return hmapCreate(
             sizeof(cjson__StringAddressMapping),
             cjson__ExtractAddress,
             cjson__CompareAddress
         );
-        */
     }
 
     char* p1 = strchr( p0, cjson__strdelim0 );
@@ -173,20 +167,70 @@ cjsonDataField* cjsonParse( char* input, unsigned input_sz, cjsonError* error ){
         return 0;
     }
     
-
     e = cjson__DeilmCheck(input,input_sz);
     if( e != cjsonerr_NoError ){
         *error = e;
         hmapFree( stringmap, cjson__StringWriteBackDelete, 0 );
         return 0;
-    }else
+    }
+
+    char* obj0 = strchr(input, cjson__objdelim0 );
+    char* arr0 = strchr(input, cjson__arrdelim0 );
+    if( obj0 || arr0 ){
+
+        char* dummy;
+        cjsonDataField* dat = (cjsonDataField*) malloc(sizeof(cjsonDataField));
+        
+        if( !arr0 || obj0 < arr0 ){
+
+            dat->Type = cjsontype_Object;
+            dat->Value.Object = cjson__ExtractObject(
+                obj0, &dummy, stringmap, error
+            );
+
+            hmapFree( stringmap, cjson__StringWriteBack, 0 );
+            return dat;
+        }
+
+        if( !obj0 || arr0 < obj0 ){
+
+            dat->Type = cjsontype_Array;
+            dat->Value.Array = cjson__ExtractArray(
+                arr0, &dummy, stringmap, error
+            );
+
+            hmapFree( stringmap, cjson__StringWriteBack, 0 );
+            return dat;
+        }
+
+        //This branch should never execute but just in case...
+        free(dat);
+        *error = cjsonerr_Unkown;
+        hmapFree( stringmap, cjson__StringWriteBackDelete, 0 );
+        return 0;
+
+    }else{
+
+        //we got some wierd input which is either complete garbage
+        //or raw data without any array or objects
+        *error = cjsonerr_BadData;
+        hmapFree( stringmap, cjson__StringWriteBackDelete, 0 );
+        return 0;
+    }
+}
+
+cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjsonError* e ){
 
     //TODO
 
-    *error = e;
-    hmapFree( stringmap, cjson__StringWriteBack, 0 );
+    return 0;
+}
 
-    return 0; //TODO
+cjsonArray* cjson__ExtractArray( char* start, char** end, hmap* strings, cjsonError* e ){
+
+    //TODO
+
+    return 0;
 }
 
 void cjsonFree( cjsonDataField* datafield ){
