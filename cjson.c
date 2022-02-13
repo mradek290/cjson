@@ -41,15 +41,27 @@ void cjson__ObjectAddField( cjsonObject* obj, cjsonObjectField* field ){
 
 _Bool cjson__StringWriteBackDelete( void* v, void* ex ){
 
-    //TODO
+    cjson__StringAddressMapping* sam = (cjson__StringAddressMapping*)v;
+    memcpy(
+        sam->Address,
+        sam->String,
+        cfstrSize(sam->String)
+    );
 
+    cfstrFree(sam->String);
     return 1;
 }
 
 _Bool cjson__StringWriteBack( void* v, void* ex ){
 
-    //TODO
+    cjson__StringAddressMapping* sam = (cjson__StringAddressMapping*)v;
+    memcpy(
+        sam->Address,
+        sam->String,
+        cfstrSize(sam->String)
+    );
 
+    cfstrFree(sam->String);
     return 1;
 }
 
@@ -113,11 +125,39 @@ hmap* cjson__ExpungeStrings( char* input ){
 
 }
 
-cjsonError cjson__DeilmCheck( const char* input, unsigned input_sz ){
+cjsonError cjson__DeilmCheck( char* input, unsigned input_sz ){
 
-    //TODO
+    const char* end = input + input_sz;
+    signed checksum0 = 0;
+    signed checksum1 = 0;
+    cjson__StringAddressMapping* sam;
 
-    return cjsonerr_Unkown;
+    while( input < end && checksum0 >= 0 && checksum1 >= 0 ){
+        switch(*input++){
+
+            case cjson__objdelim0 :
+                checksum0++;
+                continue;
+
+            case cjson__objdelim1 :
+                checksum0--;
+                continue;
+
+            case cjson__arrdelim0 :
+                checksum1++;
+                continue;
+
+            case cjson__arrdelim1 :
+                checksum1--;
+                continue;
+
+            default : continue;
+        }
+    }
+
+    if( checksum0 ) return cjsonerr_ObjDelim;
+    if( checksum1 ) return cjsonerr_ArrDelim;
+    return cjsonerr_NoError;
 }
 
 cjsonDataField* cjsonParse( char* input, unsigned input_sz, cjsonError* error ){
@@ -133,9 +173,20 @@ cjsonDataField* cjsonParse( char* input, unsigned input_sz, cjsonError* error ){
         return 0;
     }
     
+
+    e = cjson__DeilmCheck(input,input_sz);
+    if( e != cjsonerr_NoError ){
+        *error = e;
+        hmapFree( stringmap, cjson__StringWriteBackDelete, 0 );
+        return 0;
+    }else
+
     //TODO
 
-    return 0;
+    *error = e;
+    hmapFree( stringmap, cjson__StringWriteBack, 0 );
+
+    return 0; //TODO
 }
 
 void cjsonFree( cjsonDataField* datafield ){
@@ -190,6 +241,18 @@ const char* cjsonGetTypeName( cjsonType jt ){
         case cjsontype_Bool    : return "Boolean";
         case cjsontype_Null    : return "Null";
         default : return "Error: Invalid argument passed to cjsonGetTypeName";
+    }
+}
+
+const char* cjsonGetErrorName( cjsonError je ){
+    switch(je){
+        case cjsonerr_NoError  : return "No Error";
+        case cjsonerr_ObjDelim : return "Object encapsulation failure";
+        case cjsonerr_ArrDelim : return "Array encapsulation failure";
+        case cjsonerr_StrDelim : return "String encapsulation failure";
+        case cjsonerr_BadData  : return "Data Inconsistency";
+        case cjsonerr_Unkown   : return "Unkown";
+        default : return "Error: Invalid argument passed to cjsonGetErrorName";
     }
 }
 

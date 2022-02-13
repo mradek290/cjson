@@ -81,5 +81,6 @@ cjsonDataField* cjsonParse( char*, unsigned, cjsonError* );
 void cjsonFree( cjsonDataField* );
 
 const char* cjsonGetTypeName( cjsonType );
+const char* cjsonGetErrorName( cjsonError );
 
 #endif
