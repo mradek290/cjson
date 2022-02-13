@@ -124,7 +124,6 @@ cjsonError cjson__DeilmCheck( char* input, unsigned input_sz ){
     const char* end = input + input_sz;
     signed checksum0 = 0;
     signed checksum1 = 0;
-    cjson__StringAddressMapping* sam;
 
     while( input < end && checksum0 >= 0 && checksum1 >= 0 ){
         switch(*input++){
@@ -156,7 +155,7 @@ cjsonError cjson__DeilmCheck( char* input, unsigned input_sz ){
 
 cjsonDataField* cjsonParse( char* input, unsigned input_sz, cjsonError* error ){
 
-     cjsonError e;
+     cjsonError e = cjsonerr_Unkown;
     if( !error ){
         error = &e;
     }
@@ -167,9 +166,8 @@ cjsonDataField* cjsonParse( char* input, unsigned input_sz, cjsonError* error ){
         return 0;
     }
     
-    e = cjson__DeilmCheck(input,input_sz);
-    if( e != cjsonerr_NoError ){
-        *error = e;
+    *error = cjson__DeilmCheck(input,input_sz);
+    if( *error != cjsonerr_NoError ){
         hmapFree( stringmap, cjson__StringWriteBackDelete, 0 );
         return 0;
     }
@@ -219,11 +217,154 @@ cjsonDataField* cjsonParse( char* input, unsigned input_sz, cjsonError* error ){
     }
 }
 
+void cjson__ExtractNumeral( char* start, char** end, cjsonDataField* cjdf ){
+
+    char* stop = start;
+    _Bool isfloating = 0;
+    while(1){
+
+        switch(*stop++){
+
+            case '0' :
+            case '1' :
+            case '2' :
+            case '3' :
+            case '4' :
+            case '5' :
+            case '6' :
+            case '7' :
+            case '8' :
+            case '9' :
+            case '-' :
+                continue;
+
+            case '.' :
+                isfloating = 1;
+                continue;
+
+            default : break;
+        }
+
+        break;
+    }
+
+    char* dummy;
+    if( isfloating ){
+        cjdf->Type = cjsontype_Double;
+        cjdf->Value.Double = strtod(start, &dummy);
+    }else{
+        cjdf->Type = cjsontype_Integer;
+        cjdf->Value.Integer = strtoll(start, &dummy, 10); 
+    }
+
+    *end = stop-1;
+}
+
 cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjsonError* e ){
 
-    //TODO
+    cjsonObject* obj = cjsonObjectInit();
+    if( *e != cjsonerr_NoError ){
+        return obj;
+    }
 
-    return 0;
+    cjsonObjectField field;
+    while(1){
+
+        switch(*start++){
+
+            case 0:
+                *e = cjsonerr_BadData;
+
+            case cjson__objdelim1 :
+                *end = start;
+                return obj;
+
+            case cjson__objdelim0 :
+                break;
+
+            default : continue;
+        }
+
+        puts("beginning object parse");
+
+        field.Name = cjson__Address2String(strings,start)->String;
+        field.Field.Type = cjsontype_Invalid;
+        start += 1 + cfstrSize(field.Name);
+
+        while(1){
+            switch(*start++){
+            
+                case 0 : //random null terminator??
+                case cjson__objdelim1 :
+                    *e = cjsonerr_BadData;
+                    *end = start-1;
+                    return obj;
+
+                case 'n' :
+                case 'N' :
+                    field.Field.Type = cjsontype_Null;
+                    cjson__ObjectAddField(obj, &field);
+                    break;
+
+                case 't' :
+                case 'T' :
+                    field.Field.Type = cjsontype_Bool;
+                    field.Field.Value.Boolean = 1;
+                    cjson__ObjectAddField(obj, &field);
+                    break;
+
+                case 'f' :
+                case 'F' :
+                    field.Field.Type = cjsontype_Bool;
+                    field.Field.Value.Boolean = 0;
+                    cjson__ObjectAddField(obj, &field);
+                    break;
+
+                case '-' :
+                case '.' :
+                case '0' :
+                case '1' :
+                case '2' :
+                case '3' :
+                case '4' :
+                case '5' :
+                case '6' :
+                case '7' :
+                case '8' :
+                case '9' :
+                    cjson__ExtractNumeral(start-1, &start, &(field.Field) );
+                    cjson__ObjectAddField(obj, &field );
+                    break;
+
+                case cjson__objdelim0 :
+                    field.Field.Type = cjsontype_Object;
+                    field.Field.Value.Object = cjson__ExtractObject(
+                        start-1, &start, strings, e
+                    );
+                    cjson__ObjectAddField(obj, &field );
+                    break;
+
+                case cjson__arrdelim0 :
+                    field.Field.Type = cjsontype_Array;
+                    field.Field.Value.Array = cjson__ExtractArray(
+                        start, &start, strings, e
+                    );
+                    cjson__ObjectAddField(obj, &field);
+                    break;
+
+                case cjson__strdelim0 :
+                    field.Field.Type = cjsontype_String;
+                    field.Field.Value.String = cjson__Address2String(strings,start)->String;
+                    cjson__ObjectAddField(obj, &field);
+                    start += 1 + cfstrSize(field.Field.Value.String);
+                    break;
+
+                default : continue;
+            }
+
+            break;
+        }
+    }
 }
 
 cjsonArray* cjson__ExtractArray( char* start, char** end, hmap* strings, cjsonError* e ){
