@@ -40,7 +40,7 @@ union  cjson__Value;
 typedef struct {
     void* Address;
     char* String;
-} cjson_StringAddressMapping;
+} cjson__StringAddressMapping;
 
 typedef union cjson__Value {
     _Bool Boolean;
@@ -57,13 +57,13 @@ typedef struct {
 } cjsonDataField;
 
 typedef struct {
-    cjsonDataField Field;
     char* Name;
+    cjsonDataField Field;
 } cjsonObjectField;
 
 typedef struct cjson__Object {
-    unsigned Elements;
     hmap* Fields;
+    unsigned Elements;
 } cjsonObject;
 
 typedef struct cjson__Array {
@@ -79,5 +79,7 @@ cjsonDataField* cjsonGetArrayData( cjsonArray*, unsigned );
 cjsonDataField* cjsonParse( char*, unsigned, cjsonError* );
 
 void cjsonFree( cjsonDataField* );
+
+const char* cjsonGetTypeName( cjsonType );
 
 #endif
