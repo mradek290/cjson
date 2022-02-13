@@ -85,10 +85,8 @@ hmap* cjson__ExpungeStrings( char* input ){
     while(1){
 
         cjson__StringAddressMapping* sam = cjson__Address2String( map, p0 );
-        *p1 = 0;
         sam->Address = p0;
-        sam->String = cfstrCreate(p0);
-        *p1 = cjson__strdelim0;
+        sam->String = cfstrCreateSz( p0, p1-p0 );
         memset( p0, cjson__unmarkchr, p1-p0 );
 
         p0 = strchr( p1+1, cjson__strdelim0 );
@@ -135,7 +133,6 @@ cjsonDataField* cjsonParse( char* input, unsigned input_sz, cjsonError* error ){
         return 0;
     }
     
-
     //TODO
 
     return 0;
