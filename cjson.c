@@ -279,13 +279,11 @@ cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjson
                 *end = start;
                 return obj;
 
-            case cjson__objdelim0 :
+            case cjson__strdelim0 :
                 break;
 
             default : continue;
         }
-
-        puts("beginning object parse");
 
         field.Name = cjson__Address2String(strings,start)->String;
         field.Field.Type = cjsontype_Invalid;
