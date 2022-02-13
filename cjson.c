@@ -55,9 +55,64 @@ _Bool cjson__StringWriteBack( void* v, void* ex ){
 
 hmap* cjson__ExpungeStrings( char* input ){
 
-    //TODO
+    char* p0 = strchr( input, cjson__strdelim0 );
+    if( !p0++ ){
+        //there is no string data in the input so we have nothing to expunge
+        //which means the hmap wont be used and we can return anything non null
+        //we *could* return an empty map but why go through that trouble?
+        return (hmap*)1;
+        /*
+        return hmapCreate(
+            sizeof(cjson__StringAddressMapping),
+            cjson__ExtractAddress,
+            cjson__CompareAddress
+        );
+        */
+    }
 
-    return 0;
+    char* p1 = strchr( p0, cjson__strdelim0 );
+    while( p1 && p1[-1] == cjson__escapechr )
+        p1 = strchr( p1+1, cjson__escapechr );
+
+    if( !p1 ) return 0; //String lacking closing " found
+
+    hmap* map = hmapCreate(
+        sizeof(cjson__StringAddressMapping),
+        cjson__ExtractAddress,
+        cjson__CompareAddress
+    );
+
+    while(1){
+
+        cjson__StringAddressMapping* sam = cjson__Address2String( map, p0 );
+        *p1 = 0;
+        sam->Address = p0;
+        sam->String = cfstrCreate(p0);
+        *p1 = cjson__strdelim0;
+        memset( p0, cjson__unmarkchr, p1-p0 );
+
+        p0 = strchr( p1+1, cjson__strdelim0 );
+        if( !p0++ ) return map;
+
+        p1 = strchr( p0, cjson__strdelim0 );
+        while( p1 && p1[-1] == cjson__escapechr ){
+            
+            unsigned escapes = 0;
+            char* pesc = p1-1;
+            while( *pesc-- == cjson__escapechr ) ++escapes;
+            if( escapes & 1 ){
+                p1 = strchr( p1 + 1, cjson__strdelim0 );
+            }else{
+                break;
+            }
+        }
+
+        if( !p1 ){
+            hmapFree( map, cjson__StringWriteBackDelete, 0 );
+            return 0;
+        }
+    }
+
 }
 
 cjsonError cjson__DeilmCheck( const char* input, unsigned input_sz ){
@@ -69,8 +124,20 @@ cjsonError cjson__DeilmCheck( const char* input, unsigned input_sz ){
 
 cjsonDataField* cjsonParse( char* input, unsigned input_sz, cjsonError* error ){
 
-    //TODO
+     cjsonError e;
+    if( !error ){
+        error = &e;
+    }
+
+    hmap* stringmap = cjson__ExpungeStrings(input);
+    if( !stringmap ){
+        *error = cjsonerr_StrDelim;
+        return 0;
+    }
     
+
+    //TODO
+
     return 0;
 }
 
