@@ -61,7 +61,6 @@ _Bool cjson__StringWriteBack( void* v, void* ex ){
         cfstrSize(sam->String)
     );
 
-    cfstrFree(sam->String);
     return 1;
 }
 
