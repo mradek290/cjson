@@ -12,6 +12,7 @@
 #define cjson__strdelim0 '\"'
 #define cjson__escapechr '\\'
 #define cjson__unmarkchr 7
+#define cjson__default_arraynode_sz 16
 
 typedef enum {
     cjsonerr_NoError = 0,
@@ -36,6 +37,13 @@ typedef enum cjson__Type {
 struct cjson__Object;
 struct cjson__Array;
 union  cjson__Value;
+
+typedef struct cjson__ArrayNodeTag {
+    unsigned Elements;
+    unsigned Capacity;
+    struct cjson__ArrayNodeTag* Next;
+    //struct cjson__Value* Data; //Implicit!
+} cjson__ArrayNode;
 
 typedef struct {
     void* Address;

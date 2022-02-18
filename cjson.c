@@ -364,11 +364,151 @@ cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjson
     }
 }
 
+cjson__ArrayNode* cjson__ArrayNodeInit( unsigned n ){
+
+    unsigned mem_sz = sizeof(cjson__ArrayNode) + n * sizeof(cjsonDataField);
+    cjson__ArrayNode* nd = (cjson__ArrayNode*) malloc(mem_sz);
+    nd->Elements = 0;
+    nd->Capacity = n;
+    return nd;
+}
+
+cjsonDataField* cjson__ArrayNodeNext( cjson__ArrayNode** adr ){
+
+    cjson__ArrayNode* nd = *adr;
+    if( nd->Elements == nd->Capacity ){
+
+        cjson__ArrayNode* newnode = cjson__ArrayNodeInit(
+            __hmapGrowth(nd->Capacity)
+        );
+
+        newnode->Next = nd;
+        *adr = newnode;
+        nd = newnode;
+    }
+
+    unsigned slot = nd->Elements++;
+    void* value = (_Bool*)(nd+1) + slot * sizeof(cjsonDataField);
+    return (cjsonDataField*) value;
+}
+
+cjsonArray* cjson__ArrayNodeSolidify( cjson__ArrayNode* nd, unsigned total ){
+
+    cjsonArray* arr = cjsonArrayInit(total);
+    unsigned slots = 0;
+
+    while( nd ){
+
+        memcpy(
+            cjsonGetArrayData(arr,slots),
+            nd + 1,
+            sizeof(cjsonDataField) * nd->Elements
+        );
+        
+        slots += nd->Elements;
+        cjson__ArrayNode* t = nd;
+        nd = nd->Next;
+        free(t);
+    }
+
+    return arr;
+}
+
 cjsonArray* cjson__ExtractArray( char* start, char** end, hmap* strings, cjsonError* e ){
 
-    //TODO
+    if( *e != cjsonerr_NoError ){
+        return cjsonArrayInit(0);
+    }
 
-    return 0;
+    unsigned total = 0;
+    cjson__ArrayNode* nd = cjson__ArrayNodeInit(cjson__default_arraynode_sz);
+    cjsonDataField* field;
+    nd->Next = 0;
+
+    while(1){
+        switch(*start++){
+
+            case 0 : //surprise null?!
+                *end = start-1;
+
+            case cjson__objdelim1 :
+                *e = cjsonerr_BadData;
+                return cjson__ArrayNodeSolidify(nd,total);
+
+            case cjson__arrdelim1 :
+                *end = start;
+                return cjson__ArrayNodeSolidify(nd,total);
+
+            case 'n' :
+            case 'N' :
+                ++total;
+                field = cjson__ArrayNodeNext(&nd);
+                field->Type = cjsontype_Null;
+                break;
+
+            case 't' :
+            case 'T' :
+                ++total;
+                field = cjson__ArrayNodeNext(&nd);
+                field->Type = cjsontype_Bool;
+                field->Value.Boolean = 1;
+                break;
+
+            case 'f' :
+            case 'F' :
+                ++total;
+                field = cjson__ArrayNodeNext(&nd);
+                field->Type = cjsontype_Bool;
+                field->Value.Boolean = 0;
+                break;
+
+            case '-' :
+            case '.' :
+            case '0' :
+            case '1' :
+            case '2' :
+            case '3' :
+            case '4' :
+            case '5' :
+            case '6' :
+            case '7' :
+            case '8' :
+            case '9' :
+                ++total;
+                cjson__ExtractNumeral(
+                    start-1, &start, cjson__ArrayNodeNext(&nd)
+                );
+                break;
+
+            case cjson__objdelim0 :
+                ++total;
+                field = cjson__ArrayNodeNext(&nd);
+                field->Type = cjsontype_Object;
+                field->Value.Object = cjson__ExtractObject(
+                    start-1, &start, strings, e
+                );
+                break;
+
+            case cjson__arrdelim0 :
+                ++total;
+                field = cjson__ArrayNodeNext(&nd);
+                field->Type = cjsontype_Array;
+                field->Value.Array = cjson__ExtractArray(
+                    start, &start, strings, e
+                );
+                break;
+
+            case cjson__strdelim0 :
+                ++total;
+                field = cjson__ArrayNodeNext(&nd);
+                field->Type = cjsontype_String;
+                field->Value.String = cjson__Address2String(strings,start)->String;
+                start += 1 + cfstrSize(field->Value.String);
+                break;
+
+            default : continue;
+        }
+    }
 }
 
 void cjsonFree( cjsonDataField* datafield ){
