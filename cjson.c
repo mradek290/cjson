@@ -259,6 +259,15 @@ void cjson__ExtractNumeral( char* start, char** end, cjsonDataField* cjdf ){
     *end = stop-1;
 }
 
+void cjson__AssignStringData( cjsonDataField* v, char** pos, hmap* strings ){
+
+    cjson__StringAddressMapping* sam = cjson__Address2String(strings,*pos);
+    char* str = sam->String;
+    v->Type = cjsontype_String;
+    v->Value.String = str;
+    *pos += 1 + cfstrSize(str);
+}
+
 cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjsonError* e ){
 
     cjsonObject* obj = cjsonObjectInit();
@@ -350,10 +359,8 @@ cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjson
                     break;
 
                 case cjson__strdelim0 :
-                    field.Field.Type = cjsontype_String;
-                    field.Field.Value.String = cjson__Address2String(strings,start)->String;
+                    cjson__AssignStringData(field,&start,strings);
                     cjson__ObjectAddField(obj, &field);
-                    start += 1 + cfstrSize(field.Field.Value.String);
                     break;
 
                 default : continue;
@@ -500,10 +507,9 @@ cjsonArray* cjson__ExtractArray( char* start, char** end, hmap* strings, cjsonEr
 
             case cjson__strdelim0 :
                 ++total;
-                field = cjson__ArrayNodeNext(&nd);
-                field->Type = cjsontype_String;
-                field->Value.String = cjson__Address2String(strings,start)->String;
-                start += 1 + cfstrSize(field->Value.String);
+                cjson__AssignStringData(
+                    cjson__ArrayNodeNext(&nd), &start, strings
+                );
                 break;
 
             default : continue;
