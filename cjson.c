@@ -6,6 +6,8 @@
 
 cjsonObject* cjson__ExtractObject( char*, char**, hmap*, cjsonError* );
 cjsonArray*  cjson__ExtractArray( char*, char**, hmap*, cjsonError* );
+void cjson__FreeObject( cjsonObject* );
+void cjson__FreeArray( cjsonArray* );
 
 _Bool cjson__ExtractAddress( const void* v, unsigned n ){
     return *((const unsigned long long*)v) & (1ull << n);
@@ -509,10 +511,75 @@ cjsonArray* cjson__ExtractArray( char* start, char** end, hmap* strings, cjsonEr
     }
 }
 
+_Bool cjson__FreeObjectFields( void* v, void* ex ){
+
+    cjsonObjectField* of = (cjsonObjectField*)v;
+    cfstrFree(of->Name);
+
+    switch(of->Field.Type){
+
+        case cjsontype_Object :
+            cjson__FreeObject(of->Field.Value.Object);
+            break;
+
+        case cjsontype_Array :
+            cjson__FreeArray(of->Field.Value.Array);
+            break;
+
+        case cjsontype_String :
+            cfstrFree(of->Field.Value.String);
+            break;
+    }
+
+    return 1;
+}
+
+void cjson__FreeObject( cjsonObject* obj ){
+    hmapFree( obj->Fields, cjson__FreeObjectFields, 0 );
+    free(obj);
+}
+
+void cjson__FreeArray( cjsonArray* arr ){
+
+    for( unsigned i = 0; i < arr->Elements; ++i ){
+        
+        cjsonDataField* data = cjsonGetArrayData(arr,i);
+        switch(data->Type){
+
+            case cjsontype_Object :
+                cjson__FreeObject(data->Value.Object);
+                break;
+
+            case cjsontype_Array :
+                cjson__FreeArray(data->Value.Array);
+                break;
+
+            case cjsontype_String :
+                cfstrFree(data->Value.String);
+        }
+    }
+
+    free(arr);
+}
+
 void cjsonFree( cjsonDataField* datafield ){
 
-    //TODO
+    switch(datafield->Type){
 
+        case cjsontype_Object :
+            cjson__FreeObject(datafield->Value.Object);
+            break;
+
+        case cjsontype_Array :
+            cjson__FreeArray(datafield->Value.Array);
+            break;
+
+        case cjsontype_String :
+            cfstrFree(datafield->Value.String);
+            break;
+    }
+
+    free(datafield);
 }
 
 cjsonObject* cjsonObjectInit(){
