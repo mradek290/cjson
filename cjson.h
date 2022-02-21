@@ -48,6 +48,7 @@ typedef struct cjson__ArrayNodeTag {
 typedef struct {
     void* Address;
     char* String;
+    _Bool Owning;
 } cjson__StringAddressMapping;
 
 typedef union cjson__Value {

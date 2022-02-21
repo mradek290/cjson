@@ -48,19 +48,7 @@ _Bool cjson__StringWriteBackDelete( void* v, void* ex ){
         cfstrSize(sam->String)
     );
 
-    cfstrFree(sam->String);
-    return 1;
-}
-
-_Bool cjson__StringWriteBack( void* v, void* ex ){
-
-    cjson__StringAddressMapping* sam = (cjson__StringAddressMapping*)v;
-    memcpy(
-        sam->Address,
-        sam->String,
-        cfstrSize(sam->String)
-    );
-
+    if( sam->Owning ) cfstrFree(sam->String);
     return 1;
 }
 
@@ -92,6 +80,7 @@ hmap* cjson__ExpungeStrings( char* input ){
         cjson__StringAddressMapping* sam = cjson__Address2String( map, p0 );
         sam->Address = p0;
         sam->String = cfstrCreateSz( p0, p1-p0 );
+        sam->Owning = 1;
         memset( p0, cjson__unmarkchr, p1-p0 );
 
         p0 = strchr( p1+1, cjson__strdelim0 );
@@ -185,7 +174,7 @@ cjsonDataField* cjsonParse( char* input, unsigned input_sz, cjsonError* error ){
                 obj0, &dummy, stringmap, error
             );
 
-            hmapFree( stringmap, cjson__StringWriteBack, 0 );
+            hmapFree( stringmap, cjson__StringWriteBackDelete, 0 );
             return dat;
         }
 
@@ -196,7 +185,7 @@ cjsonDataField* cjsonParse( char* input, unsigned input_sz, cjsonError* error ){
                 arr0, &dummy, stringmap, error
             );
 
-            hmapFree( stringmap, cjson__StringWriteBack, 0 );
+            hmapFree( stringmap, cjson__StringWriteBackDelete, 0 );
             return dat;
         }
 
@@ -263,6 +252,7 @@ void cjson__AssignStringData( cjsonDataField* v, char** pos, hmap* strings ){
 
     cjson__StringAddressMapping* sam = cjson__Address2String(strings,*pos);
     char* str = sam->String;
+    sam->Owning = 0;
     v->Type = cjsontype_String;
     v->Value.String = str;
     *pos += 1 + cfstrSize(str);
@@ -293,8 +283,10 @@ cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjson
             default : continue;
         }
 
-        field.Name = cjson__Address2String(strings,start)->String;
+        cjson__StringAddressMapping* sam = cjson__Address2String(strings,start);
+        field.Name = sam->String;
         field.Field.Type = cjsontype_Invalid;
+        sam->Owning = 0;
         start += 1 + cfstrSize(field.Name);
 
         while(1){
@@ -359,7 +351,7 @@ cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjson
                     break;
 
                 case cjson__strdelim0 :
-                    cjson__AssignStringData(field,&start,strings);
+                    cjson__AssignStringData(&(field.Field),&start,strings);
                     cjson__ObjectAddField(obj, &field);
                     break;
 
