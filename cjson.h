@@ -2,6 +2,12 @@
 #ifndef CJSON_HEADER_GUARD
 #define CJSON_HEADER_GUARD
 
+#ifdef CJSON_DLL_EXPORT
+#define CJSON_DECLSPEC __declspec(dllexport)
+#else
+#define CJSON_DECLSPEC
+#endif
+
 #include "hmap/hmap.c"
 #include "comfystring/comfystr.c"
 
@@ -79,17 +85,17 @@ typedef struct cjson__Array {
     unsigned Elements;
 } cjsonArray;
 
-cjsonObject* cjsonObjectInit();
-cjsonArray*  cjsonArrayInit(unsigned);
+CJSON_DECLSPEC cjsonObject* cjsonObjectInit();
+CJSON_DECLSPEC cjsonArray*  cjsonArrayInit(unsigned);
 
-cjsonDataField* cjsonGetObjectField( cjsonObject*, const char* );
-cjsonDataField* cjsonGetArrayData( cjsonArray*, unsigned );
+CJSON_DECLSPEC cjsonDataField* cjsonGetObjectField( cjsonObject*, const char* );
+CJSON_DECLSPEC cjsonDataField* cjsonGetArrayData( cjsonArray*, unsigned );
 
-cjsonDataField* cjsonParse( char*, unsigned, cjsonError* );
+CJSON_DECLSPEC cjsonDataField* cjsonParse( char*, unsigned, cjsonError* );
 
-void cjsonFree( cjsonDataField* );
+CJSON_DECLSPEC void cjsonFree( cjsonDataField* );
 
-const char* cjsonGetTypeName( cjsonType );
-const char* cjsonGetErrorName( cjsonError );
+CJSON_DECLSPEC const char* cjsonGetTypeName( cjsonType );
+CJSON_DECLSPEC const char* cjsonGetErrorName( cjsonError );
 
 #endif
