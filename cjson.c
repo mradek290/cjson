@@ -34,7 +34,7 @@ _Bool cjson__CompareObjectName( const void* a, const void* b ){
     return ssa == ssb ? !memcmp(sa,sb,ssa) : 0;
 }
 
-void cjson__ObjectAddField( cjsonObject* obj, cjsonObjectField* field ){
+void cjsonObjectAddField( cjsonObject* obj, cjsonObjectField* field ){
 
     cjsonObjectField* adr = (cjsonObjectField*) hmapGet( obj->Fields, &(field->Name) );
     *adr = *field;
@@ -262,7 +262,7 @@ void cjson__AssignStringData( cjsonDataField* v, char** pos, hmap* strings ){
 
 cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjsonError* e ){
 
-    cjsonObject* obj = cjsonObjectInit();
+    cjsonObject* obj = cjsonInitObject();
     if( *e != cjsonerr_NoError ){
         return obj;
     }
@@ -303,21 +303,21 @@ cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjson
                 case 'n' :
                 case 'N' :
                     field.Field.Type = cjsontype_Null;
-                    cjson__ObjectAddField(obj, &field);
+                    cjsonObjectAddField(obj, &field);
                     break;
 
                 case 't' :
                 case 'T' :
                     field.Field.Type = cjsontype_Bool;
                     field.Field.Value.Boolean = 1;
-                    cjson__ObjectAddField(obj, &field);
+                    cjsonObjectAddField(obj, &field);
                     break;
 
                 case 'f' :
                 case 'F' :
                     field.Field.Type = cjsontype_Bool;
                     field.Field.Value.Boolean = 0;
-                    cjson__ObjectAddField(obj, &field);
+                    cjsonObjectAddField(obj, &field);
                     break;
 
                 case '-' :
@@ -333,7 +333,7 @@ cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjson
                 case '8' :
                 case '9' :
                     cjson__ExtractNumeral(start-1, &start, &(field.Field) );
-                    cjson__ObjectAddField(obj, &field );
+                    cjsonObjectAddField(obj, &field );
                     break;
 
                 case cjson__objdelim0 :
@@ -341,7 +341,7 @@ cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjson
                     field.Field.Value.Object = cjson__ExtractObject(
                         start-1, &start, strings, e
                     );
-                    cjson__ObjectAddField(obj, &field );
+                    cjsonObjectAddField(obj, &field );
                     break;
 
                 case cjson__arrdelim0 :
@@ -349,12 +349,12 @@ cjsonObject* cjson__ExtractObject( char* start, char** end, hmap* strings, cjson
                     field.Field.Value.Array = cjson__ExtractArray(
                         start, &start, strings, e
                     );
-                    cjson__ObjectAddField(obj, &field);
+                    cjsonObjectAddField(obj, &field);
                     break;
 
                 case cjson__strdelim0 :
                     cjson__AssignStringData(&(field.Field),&start,strings);
-                    cjson__ObjectAddField(obj, &field);
+                    cjsonObjectAddField(obj, &field);
                     break;
 
                 default : continue;
@@ -395,7 +395,7 @@ cjsonDataField* cjson__ArrayNodeNext( cjson__ArrayNode** adr ){
 
 cjsonArray* cjson__ArrayNodeSolidify( cjson__ArrayNode* nd, unsigned total ){
 
-    cjsonArray* arr = cjsonArrayInit(total);
+    cjsonArray* arr = cjsonInitArray(total);
     unsigned slots = 0;
 
     while( nd ){
@@ -418,7 +418,7 @@ cjsonArray* cjson__ArrayNodeSolidify( cjson__ArrayNode* nd, unsigned total ){
 cjsonArray* cjson__ExtractArray( char* start, char** end, hmap* strings, cjsonError* e ){
 
     if( *e != cjsonerr_NoError ){
-        return cjsonArrayInit(0);
+        return cjsonInitArray(0);
     }
 
     unsigned total = 0;
@@ -582,7 +582,7 @@ void cjsonFree( cjsonDataField* datafield ){
     free(datafield);
 }
 
-cjsonObject* cjsonObjectInit(){
+cjsonObject* cjsonInitObject(){
 
     cjsonObject* obj = (cjsonObject*) malloc( sizeof(cjsonObject) );
     obj->Elements = 0;
@@ -595,7 +595,7 @@ cjsonObject* cjsonObjectInit(){
     return obj;
 }
 
-cjsonArray* cjsonArrayInit( unsigned sz ){
+cjsonArray* cjsonInitArray( unsigned sz ){
 
     cjsonArray* arr = (cjsonArray*) malloc(
         sizeof(cjsonArray) + sz * sizeof(cjsonDataField)
@@ -641,6 +641,10 @@ const char* cjsonGetErrorName( cjsonError je ){
         case cjsonerr_Unkown   : return "Unkown";
         default : return "Error: Invalid argument passed to cjsonGetErrorName";
     }
+}
+
+cjsonDataField* cjsonInitRoot(){
+    return (cjsonDataField*) malloc( sizeof(cjsonDataField) );
 }
 
 #endif
