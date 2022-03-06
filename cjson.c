@@ -919,4 +919,105 @@ void cjsonEnumerateObject( cjsonObject* obj , cjsonObjectLambda fnc, void* ex ){
     );
 }
 
+//----------------------------------------------------------------
+#ifdef CJSON_DLL_EXPORT
+
+cjsonType cjsonGetDataType( cjsonDataField* df ){
+    return df->Type;
+}
+
+long long cjsonGetDataAsInt( cjsonDataField* df ){
+    return df->Value.Integer;
+}
+
+double cjsonGetDataAsDouble( cjsonDataField* df ){
+    return df->Value.Double;
+}
+
+_Bool cjsonGetDataAsBool( cjsonDataField* df ){
+    return df->Value.Boolean;
+}
+
+char* cjsonGetDataAsString( cjsonDataField* df ){
+    return df->Value.String;
+}
+
+cjsonObject* cjsonGetDataAsObject( cjsonDataField* df ){
+    return df->Value.Object;
+}
+
+cjsonArray*  cjsonGetDataAsArray( cjsonDataField* df ){
+    return df->Value.Array;
+}
+
+void cjsonSetDataAsInt( cjsonDataField* df, long long v ){
+    df->Type = cjsontype_Integer;
+    df->Value.Integer = v;
+}
+
+void cjsonSetDataAsDouble( cjsonDataField* df, double v ){
+    df->Type = cjsontype_Double;
+    df->Value.Double = v;
+}
+
+void cjsonSetDataAsBool( cjsonDataField* df, _Bool v ){
+    df->Type = cjsontype_Bool;
+    df->Value.Boolean = v;
+}
+
+void cjsonSetDataAsString( cjsonDataField* df, const char* v ){
+    df->Type = cjsontype_String;
+    df->Value.String = cfstrCreate(v);
+}
+
+void cjsonSetDataAsObject( cjsonDataField* df, cjsonObject* v ){
+    df->Type = cjsontype_Object;
+    df->Value.Object = v;
+}
+
+void cjsonSetDataAsArray( cjsonDataField* df, cjsonArray* v ){
+    df->Type = cjsontype_Array;
+    df->Value.Array = v;
+}
+
+unsigned cjsonGetArraySize( cjsonArray* arr ){
+    return arr->Elements;
+}
+
+unsigned cjsonGetObjectElementCount( cjsonObject* obj){
+    return obj->Elements;
+}
+
+_Bool cjson__ConsolidateObjectFields( cjsonObjectField* v, void* ex ){
+
+    cjsonObjectField** adr = (cjsonObjectField**)ex;
+    *(*adr)++ = *v;
+    return 1;
+}
+
+cjsonObjectField* cjsonGetObjectFields( cjsonObject* obj ){
+
+    cjsonObjectField* adr = malloc( sizeof(cjsonObjectField) * obj->Elements );
+    cjsonObjectField* res = adr;
+    cjsonEnumerateObject( obj, cjson__ConsolidateObjectFields, &adr );
+    return res;
+}
+
+char* cjsonGetObjectFieldName( cjsonObjectField* obj ){
+    return obj->Name;
+}
+
+cjsonType cjsonGetObjectFieldType( cjsonObjectField* obj ){
+    return obj->Field.Type;
+}
+
+cjsonDataField* cjsonGetObjectFieldData( cjsonObjectField* obj ){
+    return &(obj->Field);
+}
+
+cjsonObjectField* cjsonAccessObjectFields( cjsonObjectField* obj , unsigned n ){
+    return obj+n;
+}
+#endif
+
 #endif

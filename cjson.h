@@ -106,4 +106,32 @@ CJSON_DECLSPEC void cjsonFree( cjsonDataField* );
 CJSON_DECLSPEC const char* cjsonGetTypeName( cjsonType );
 CJSON_DECLSPEC const char* cjsonGetErrorName( cjsonError );
 
+//------------------------------------------------------------------------
+
+#ifdef CJSON_DLL_EXPORT
+CJSON_DECLSPEC cjsonType cjsonGetDataType( cjsonDataField* );
+CJSON_DECLSPEC long long cjsonGetDataAsInt( cjsonDataField* );
+CJSON_DECLSPEC double cjsonGetDataAsDouble( cjsonDataField* );
+CJSON_DECLSPEC _Bool cjsonGetDataAsBool( cjsonDataField* );
+CJSON_DECLSPEC char* cjsonGetDataAsString( cjsonDataField* );
+CJSON_DECLSPEC cjsonObject* cjsonGetDataAsObject( cjsonDataField* );
+CJSON_DECLSPEC cjsonArray*  cjsonGetDataAsArray( cjsonDataField* );
+
+CJSON_DECLSPEC void cjsonSetDataAsInt( cjsonDataField*, long long );
+CJSON_DECLSPEC void cjsonSetDataAsDouble( cjsonDataField*, double );
+CJSON_DECLSPEC void cjsonSetDataAsBool( cjsonDataField*, _Bool );
+CJSON_DECLSPEC void cjsonSetDataAsString( cjsonDataField*, const char* );
+CJSON_DECLSPEC void cjsonSetDataAsObject( cjsonDataField*, cjsonObject* );
+CJSON_DECLSPEC void cjsonSetDataAsArray( cjsonDataField*, cjsonArray* );
+
+CJSON_DECLSPEC unsigned cjsonGetArraySize( cjsonArray* );
+CJSON_DECLSPEC unsigned cjsonGetObjectElementCount( cjsonObject* );
+CJSON_DECLSPEC cjsonObjectField* cjsonGetObjectFields( cjsonObject* );
+CJSON_DECLSPEC cjsonObjectField* cjsonAccessObjectFields( cjsonObjectField*, unsigned );
+
+CJSON_DECLSPEC char* cjsonGetObjectFieldName( cjsonObjectField* );
+CJSON_DECLSPEC cjsonType cjsonGetObjectFieldType( cjsonObjectField* );
+CJSON_DECLSPEC cjsonDataField* cjsonGetObjectFieldData( cjsonObjectField* );
+#endif
+
 #endif
