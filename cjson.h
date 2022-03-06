@@ -8,6 +8,7 @@
 #define CJSON_DECLSPEC
 #endif
 
+#include <stdio.h>
 #include "hmap/hmap.c"
 #include "comfystring/comfystr.c"
 
