@@ -85,6 +85,8 @@ typedef struct cjson__Array {
     unsigned Elements;
 } cjsonArray;
 
+typedef _Bool (*cjsonObjectLambda)( cjsonObjectField*, void* );
+
 CJSON_DECLSPEC cjsonDataField* cjsonInitRoot();
 CJSON_DECLSPEC cjsonObject* cjsonInitObject();
 CJSON_DECLSPEC cjsonArray*  cjsonInitArray(unsigned);
@@ -92,9 +94,11 @@ CJSON_DECLSPEC cjsonArray*  cjsonInitArray(unsigned);
 CJSON_DECLSPEC cjsonDataField* cjsonGetObjectField( cjsonObject*, const char* );
 CJSON_DECLSPEC cjsonDataField* cjsonGetArrayData( cjsonArray*, unsigned );
 
+/*-----------*/void cjsonEnumerateObject( cjsonObject*, cjsonObjectLambda, void* );
 CJSON_DECLSPEC void cjsonObjectAddField( cjsonObject*, cjsonObjectField* );
 
 CJSON_DECLSPEC cjsonDataField* cjsonParse( char*, unsigned, cjsonError* );
+CJSON_DECLSPEC char* cjsonSerialize( cjsonDataField* );
 
 CJSON_DECLSPEC void cjsonFree( cjsonDataField* );
 

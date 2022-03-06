@@ -8,6 +8,12 @@ cjsonObject* cjson__ExtractObject( char*, char**, hmap*, cjsonError* );
 cjsonArray*  cjson__ExtractArray( char*, char**, hmap*, cjsonError* );
 void cjson__FreeObject( cjsonObject* );
 void cjson__FreeArray( cjsonArray* );
+unsigned cjson__ComputeObjectBuffer( cjsonObject* );
+unsigned cjson__ComputeArrayBuffer( cjsonArray* );
+unsigned cjson__ComputeDataFieldBuffer( cjsonDataField* );
+void cjson__PrintArray( char**, cjsonArray* );
+void cjson__PrintObject( char**, cjsonObject* );
+void cjson__PrintDataField( char** , cjsonDataField* );
 
 _Bool cjson__ExtractAddress( const void* v, unsigned n ){
     return *((const unsigned long long*)v) & (1ull << n);
@@ -645,6 +651,272 @@ const char* cjsonGetErrorName( cjsonError je ){
 
 cjsonDataField* cjsonInitRoot(){
     return (cjsonDataField*) malloc( sizeof(cjsonDataField) );
+}
+
+_Bool cjson__ComputeObjectFieldBuffer( cjsonObjectField* of, void* ex ){
+
+    /*
+     * minimal objectfield
+     * "":*,
+     */
+
+    unsigned* sz = (unsigned*)ex;
+    *sz += 5 + cfstrSize(of->Name) + cjson__ComputeDataFieldBuffer(&(of->Field));
+
+    return 1;
+}
+
+unsigned cjson__ComputeObjectBuffer( cjsonObject* obj ){
+
+    unsigned sz = 2;
+    cjsonEnumerateObject(obj, cjson__ComputeObjectFieldBuffer, &sz );
+    return sz;
+}
+
+unsigned cjson__ComputeArrayBuffer( cjsonArray* arr ){
+
+    unsigned e = arr->Elements;
+    unsigned sz = 2 + e; //[] and e amounts of commata
+
+    for( unsigned i = 0; i < e; ++i )
+        sz += cjson__ComputeDataFieldBuffer(
+            cjsonGetArrayData(arr,i)
+        );
+
+    return sz;
+}
+
+unsigned cjson__ComputeDataFieldBuffer( cjsonDataField* df ){
+
+    //Return upper bounds for how long a string represntation of the data would be
+    switch(df->Type){
+        case cjsontype_Object  : return cjson__ComputeObjectBuffer(df->Value.Object);
+        case cjsontype_Array   : return cjson__ComputeArrayBuffer(df->Value.Array);
+        case cjsontype_String  : return cfstrSize(df->Value.String) + 3; //account for "" and \0
+        case cjsontype_Integer : return 25;
+        case cjsontype_Double  : return 40;
+        case cjsontype_Bool    : return 6;
+        case cjsontype_Null    : return 5;
+        default : return 0;
+    }
+}
+
+void cjson__PrintArray( char** pstr, cjsonArray* arr ){
+
+    if( arr->Elements == 0 ){
+
+        char* str = *pstr;
+        str[0] = cjson__arrdelim0;
+        str[1] = cjson__arrdelim1;
+        *pstr = str+2;
+        return;
+    }
+
+    const char* vname;
+    *(*pstr)++ = cjson__arrdelim0;
+    for( unsigned i = 0; i < arr->Elements-1; ++i ){
+        
+        cjsonDataField* df = cjsonGetArrayData(arr,i);
+        switch(df->Type){
+
+            case cjsontype_Null : 
+                *pstr += sprintf( *pstr, "null," );
+                break;
+
+            case cjsontype_Bool :
+                vname = df->Value.Boolean ? "true" : "false";
+                *pstr += sprintf( *pstr, "%s,", vname );
+                break;
+
+            case cjsontype_String :
+                *pstr += sprintf( *pstr, "\"%s\",", df->Value.String );
+                break;
+
+            case cjsontype_Double :
+                *pstr += sprintf( *pstr, "%f,", df->Value.Double );
+                break;
+
+            case cjsontype_Integer :
+                *pstr += sprintf( *pstr, "%d,", df->Value.Integer );
+                break;
+
+            case cjsontype_Object :
+                cjson__PrintObject( pstr, df->Value.Object );
+                *(*pstr)++ = ',';
+                break;
+
+            case cjsontype_Array :
+                cjson__PrintArray( pstr, df->Value.Array );
+                *(*pstr)++ = ',';
+                break;
+
+            default : break;
+        }
+    }
+
+    //cjson__PrintDataField( pstr, cjsonGetArrayData(arr, arr->Elements-1) );
+
+    cjsonDataField* df = cjsonGetArrayData(arr, arr->Elements-1);
+    switch(df->Type){
+
+        case cjsontype_Null : 
+            *pstr += sprintf( *pstr, "null" );
+            break;
+
+        case cjsontype_Bool :
+            vname = df->Value.Boolean ? "true" : "false";
+            *pstr += sprintf( *pstr, "%s", vname );
+            break;
+
+        case cjsontype_String :
+            *pstr += sprintf( *pstr, "\"%s\"", df->Value.String );
+            break;
+
+        case cjsontype_Double :
+            *pstr += sprintf( *pstr, "%f", df->Value.Double );
+            break;
+
+        case cjsontype_Integer :
+            *pstr += sprintf( *pstr, "%d", df->Value.Integer );
+            break;
+
+        case cjsontype_Object :
+            cjson__PrintObject( pstr, df->Value.Object );
+            break;
+
+        case cjsontype_Array :
+            cjson__PrintArray( pstr, df->Value.Array );
+            break;
+
+        default : break;
+    }
+
+    *(*pstr)++ = cjson__arrdelim1;
+}
+
+_Bool cjson__PrintObjectField( cjsonObjectField* of, void* ex ){
+
+    char** pstr = (char**)ex;
+    const char* vname;
+    switch(of->Field.Type){
+
+        case cjsontype_Null :
+            *pstr += sprintf( *pstr, "\"%s\":null,", of->Name );
+            break;
+
+        case cjsontype_Bool :
+            vname = of->Field.Value.Boolean ? "true" : "false";
+            *pstr += sprintf( *pstr, "\"%s\":%s,", of->Name, vname );
+            break;
+
+        case cjsontype_Double :
+            *pstr += sprintf( *pstr, "\"%s\":%f,", of->Name, of->Field.Value.Double );
+            break;
+
+        case cjsontype_Integer :
+            *pstr += sprintf( *pstr, "\"%s\":%d,", of->Name, of->Field.Value.Integer );
+            break;
+
+        case cjsontype_String :
+            *pstr += sprintf( *pstr, "\"%s\":\"%s\",", of->Name, of->Field.Value.String );
+            break;
+
+        case cjsontype_Array :
+            *pstr += sprintf( *pstr, "\"%s\":", of->Name );
+            cjson__PrintArray( pstr, of->Field.Value.Array );
+            *(*pstr)++ = ',';
+            break;
+
+        case cjsontype_Object :
+            *pstr += sprintf( *pstr, "\"%s\":", of->Name );
+            cjson__PrintObject( pstr, of->Field.Value.Object );
+            *(*pstr)++ = ',';
+            break;
+
+        default : break;
+    }
+
+    return 1;
+}
+
+void cjson__PrintObject( char** pstr, cjsonObject* obj ){
+
+    if( obj->Elements == 0 ){
+
+        char* str = *pstr;
+        str[0] = cjson__objdelim0;
+        str[1] = cjson__objdelim1;
+        *pstr = str+2;
+        return;
+    }
+
+    *(*pstr)++ = cjson__objdelim0;
+    cjsonEnumerateObject( obj, cjson__PrintObjectField, pstr );
+    (*pstr)[-1] = cjson__objdelim1;
+}
+
+void cjson__PrintDataField( char** pstr, cjsonDataField* df ){
+
+    char* str = *pstr;
+    int printed;
+    const char* vname;
+
+    switch(df->Type){
+
+        case cjsontype_Null :
+            printed = sprintf( str, "null" );
+            break;
+
+        case cjsontype_Bool :
+            vname = df->Value.Boolean ? "true" : "false";
+            printed = sprintf( str, "%s", vname );
+            break;
+
+        case cjsontype_String :
+            printed = sprintf( str, "\"%s\"", df->Value.String );
+            break;
+
+        case cjsontype_Integer :
+            printed = sprintf( str, "%d", df->Value.Integer );
+            break;
+
+        case cjsontype_Double :
+            printed = sprintf( str, "%f", df->Value.Double );
+            break;
+
+        case cjsontype_Object :
+            cjson__PrintObject( pstr, df->Value.Object );
+            break;
+
+        case cjsontype_Array :
+            cjson__PrintArray( pstr, df->Value.Array );
+            break;
+
+        default : printed = 0;
+    }
+
+    *pstr = str+printed;
+}
+
+char* cjsonSerialize( cjsonDataField* df ){
+
+    if( !df ) return 0;
+
+    unsigned buf_sz = cjson__ComputeDataFieldBuffer(df) + 1;
+    unsigned* adr = (unsigned*) calloc( sizeof(unsigned) + buf_sz, sizeof(char) );
+    char* str0 = (char*)(adr+1);
+    char* str1 = str0;
+    cjson__PrintDataField( &str1, df );
+    *adr = strlen(str0); //there is a better way to do this but its 2am and im tired
+    return str0;
+}
+
+void cjsonEnumerateObject( cjsonObject* obj , cjsonObjectLambda fnc, void* ex ){
+    hmapLoop(
+        obj->Fields,
+        (hmapLambda) fnc,
+        ex
+    );
 }
 
 #endif
