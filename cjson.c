@@ -922,6 +922,10 @@ void cjsonEnumerateObject( cjsonObject* obj , cjsonObjectLambda fnc, void* ex ){
 //----------------------------------------------------------------
 #ifdef CJSON_DLL_EXPORT
 
+void cjsonCleanUpString( char* s ){
+    cfstrFree(s);
+}
+
 cjsonType cjsonGetDataType( cjsonDataField* df ){
     return df->Type;
 }

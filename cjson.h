@@ -109,6 +109,9 @@ CJSON_DECLSPEC const char* cjsonGetErrorName( cjsonError );
 //------------------------------------------------------------------------
 
 #ifdef CJSON_DLL_EXPORT
+
+CJSON_DECLSPEC void cjsonCleanUpString( char* );
+
 CJSON_DECLSPEC cjsonType cjsonGetDataType( cjsonDataField* );
 CJSON_DECLSPEC long long cjsonGetDataAsInt( cjsonDataField* );
 CJSON_DECLSPEC double cjsonGetDataAsDouble( cjsonDataField* );
